@@ -17,7 +17,7 @@ import { Copy } from 'lucide-react';
 interface SchoolDetailsModalProps {
     isOpen: boolean;
     onClose: () => void;
-    school: School | null; // receive full school from parent
+    school: School | null;
 }
 
 type DetailItem = { label: string; value: string; isBadge?: boolean; isCopy?: boolean };

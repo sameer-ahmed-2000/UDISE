@@ -48,7 +48,6 @@ export default function signupPage() {
             const token = response.data.token;
             if (!token) throw new Error('Invalid credentials');
 
-            // Store token in localStorage
             Cookies.set('token', token, { expires: 7 });
 
             toast.success('Registeration successful');

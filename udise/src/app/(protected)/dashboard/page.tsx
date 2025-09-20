@@ -19,30 +19,25 @@ export default function DashboardPage() {
     const [page, setPage] = useState(1);
     const [pageSize, setPageSize] = useState(20);
     const router = useRouter();
-    // 🔹 React Query hooks - pass pagination parameters
     const { data, isLoading, refetch } = useSchools(page, pageSize, filters);
 
     const schools = data?.data || [];
     useEffect(() => {
         const token = Cookies.get("token");
 
-        // Redirect to login if no token
         if (!token) {
             router.push("/login");
             return;
         }
     }, [router]);
-    // Debug logging to understand data structure
     console.log('API Response data:', data);
     console.log('Schools array:', schools);
     console.log('First school:', schools[0]);
 
-    // Reset page when filters change
     useEffect(() => {
         setPage(1);
     }, [filters]);
 
-    // 🔹 Modal state
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [editingSchool, setEditingSchool] = useState<School | null>(null);
     const [viewingSchool, setViewingSchool] = useState<School | null>(null);
@@ -53,10 +48,8 @@ export default function DashboardPage() {
             <DashboardHeader />
 
             <main className="container mx-auto px-4 py-6 space-y-6">
-                {/* 🔹 Filters */}
                 <FilterBar filters={filters} setFilters={setFilters} />
 
-                {/* 🔹 Header + Add button */}
                 <div className="flex justify-between items-center">
                     <h2 className="text-2xl font-bold text-gray-900">
                         Schools Management
@@ -84,7 +77,6 @@ export default function DashboardPage() {
                         />
                     </div>
 
-                    {/* 🔹 Distribution Charts */}
                     <div className="xl:col-span-1">
                         <DistributionCharts filters={filters} />
                     </div>

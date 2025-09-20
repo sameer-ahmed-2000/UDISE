@@ -56,8 +56,7 @@ export default function SchoolFormModal({ isOpen, onClose, school, onSuccess }: 
     const [districts, setDistricts] = useState<string[]>([]);
     const [blocks, setBlocks] = useState<string[]>([]);
     const [villages, setVillages] = useState<string[]>([]);
-    const token = Cookies.get('token'); // or your auth token
-    const queryClient = useQueryClient()
+    const token = Cookies.get('token');
     const isEdit = !!school;
 
     const {
@@ -84,10 +83,8 @@ export default function SchoolFormModal({ isOpen, onClose, school, onSuccess }: 
         },
     });
 
-    // Reset form when school prop changes (edit -> create or create -> edit)
     useEffect(() => {
         if (school) {
-            // Edit mode - populate with school data
             reset({
                 udise_code: school.udise_code,
                 school_name: school.school_name,
@@ -102,7 +99,6 @@ export default function SchoolFormModal({ isOpen, onClose, school, onSuccess }: 
                 school_status: school.school_status,
             });
         } else {
-            // Create mode - reset to default values and clear all dropdowns
             reset({
                 udise_code: '',
                 school_name: '',
@@ -116,17 +112,14 @@ export default function SchoolFormModal({ isOpen, onClose, school, onSuccess }: 
                 school_type: 'Co-Ed',
                 school_status: 'Active',
             });
-            // Clear all dropdown options
             setDistricts([]);
             setBlocks([]);
             setVillages([]);
         }
     }, [school, reset]);
 
-    // Cleanup when modal closes
     useEffect(() => {
         if (!isOpen) {
-            // Reset form to initial state when modal closes
             reset({
                 udise_code: '',
                 school_name: '',
@@ -140,7 +133,6 @@ export default function SchoolFormModal({ isOpen, onClose, school, onSuccess }: 
                 school_type: 'Co-Ed',
                 school_status: 'Active',
             });
-            // Clear dropdowns
             setDistricts([]);
             setBlocks([]);
             setVillages([]);
@@ -148,10 +140,8 @@ export default function SchoolFormModal({ isOpen, onClose, school, onSuccess }: 
     }, [isOpen, reset]);
     const fetchOptions = async (level: string, parent?: Record<string, string>) => {
         try {
-            // Build params ensuring we don't send empty values
             const params: any = {};
             if (parent) {
-                // Only add non-empty, non-null, non-undefined values
                 Object.keys(parent).forEach(key => {
                     if (parent[key]) {
                         params[key] = parent[key];
@@ -173,7 +163,6 @@ export default function SchoolFormModal({ isOpen, onClose, school, onSuccess }: 
             }
         } catch (err: any) {
             console.error(`Failed to fetch ${level}:`, err);
-            // Show user-friendly error message
             if (err.response?.status === 400) {
                 console.error(`Invalid parameters for ${level} filter request`);
             } else {
@@ -182,12 +171,10 @@ export default function SchoolFormModal({ isOpen, onClose, school, onSuccess }: 
         }
     };
 
-    // Initial load - fetch states when component mounts
     useEffect(() => { 
         fetchOptions('state'); 
     }, []);
 
-    // When state changes
     useEffect(() => {
         const stateValue = watch('state');
         if (stateValue) {
@@ -202,7 +189,6 @@ export default function SchoolFormModal({ isOpen, onClose, school, onSuccess }: 
         }
     }, [watch('state')]);
 
-    // When district changes
     useEffect(() => {
         const stateValue = watch('state');
         const districtValue = watch('district');
@@ -217,7 +203,6 @@ export default function SchoolFormModal({ isOpen, onClose, school, onSuccess }: 
         }
     }, [watch('state'), watch('district')]);
 
-    // When block changes
     useEffect(() => {
         const stateValue = watch('state');
         const districtValue = watch('district');
@@ -231,8 +216,6 @@ export default function SchoolFormModal({ isOpen, onClose, school, onSuccess }: 
         }
     }, [watch('state'), watch('district'), watch('block')]);
 
-    // In your SchoolFormModal component, update the onSubmit function:
-
     const onSubmit = async (data: SchoolFormData) => {
         try {
             if (isEdit && (school?._id || school?.id)) {
@@ -243,9 +226,7 @@ export default function SchoolFormModal({ isOpen, onClose, school, onSuccess }: 
             } else {
                 await createMutation.mutateAsync(data);
             }
-            // The mutation hooks will handle query invalidation automatically
             onClose();
-            // Reset form after successful submission
             reset({
                 udise_code: '',
                 school_name: '',
@@ -259,16 +240,12 @@ export default function SchoolFormModal({ isOpen, onClose, school, onSuccess }: 
                 school_type: 'Co-Ed',
                 school_status: 'Active',
             });
-            // Clear dropdowns
             setDistricts([]);
             setBlocks([]);
             setVillages([]);
-            // Call the success callback if provided
             onSuccess?.();
         } catch (error: any) {
-            // Error is handled by the mutation hooks
             console.error('Form submission error:', error);
-            // Show user-friendly error message
             if (error.response?.status === 400) {
                 console.error('Validation error in form submission');
             } else {

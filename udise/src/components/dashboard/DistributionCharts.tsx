@@ -19,14 +19,12 @@ import {
     YAxis
 } from 'recharts';
 
-// Define types for chart data
 interface ChartDataItem {
     label: string;
     count: number;
     percentage?: string;
 }
 
-// Define types for Recharts components
 interface TooltipProps {
     active?: boolean;
     payload?: Array<{
@@ -63,7 +61,6 @@ function ChartWithSelector({ title, data, colors }: ChartWithSelectorProps) {
 
     const total = data.reduce((acc, item) => acc + item.count, 0);
 
-    // Add percentage to each data item
     const chartData = data.map(item => ({
         ...item,
         percentage: total > 0 ? ((item.count / total) * 100).toFixed(1) : '0',
@@ -133,7 +130,6 @@ function ChartWithSelector({ title, data, colors }: ChartWithSelectorProps) {
                     />
                     <Legend
                         formatter={(value, entry, index) => {
-                            // find the matching item from your data
                             const item = chartData.find(d => d.label === value);
                             if (!item) return value;
 

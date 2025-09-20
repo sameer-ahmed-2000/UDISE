@@ -3,7 +3,6 @@ import { Filter, School } from '@/types';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
-// 🔹 Fetch schools with filters
 export const useSchools = (page: number = 1, pageSize: number = 10, filters: Filter = {}) => {
     const query = useQuery({
         queryKey: ['schools', page, pageSize, filters],
@@ -11,14 +10,12 @@ export const useSchools = (page: number = 1, pageSize: number = 10, filters: Fil
         staleTime: 5000,
     });
 
-    return { ...query, refetch: query.refetch }; // expose refetch
+    return { ...query, refetch: query.refetch };
 };
 
 
-// Common context type for optimistic updates
-type MutationContext = { prevData?: any };
+type MutationContext = { prevData?: [] };
 
-// 🔹 Create school (all fields except ids required)
 export const useCreateSchool = () => {
     const queryClient = useQueryClient();
 
@@ -47,12 +44,10 @@ export const useCreateSchool = () => {
             toast.error((err as any).response?.data?.message || 'Failed to create school');
         },
         onSuccess: () => {
-            // Invalidate all schools queries regardless of filters/pagination
             queryClient.invalidateQueries({ 
                 queryKey: ['schools'],
                 exact: false 
             });
-            // Also invalidate distribution data
             queryClient.invalidateQueries({ 
                 queryKey: ['distribution'],
                 exact: false 
@@ -65,7 +60,6 @@ export const useCreateSchool = () => {
     });
 };
 
-// 🔹 Update school (partial payload allowed)
 export const useUpdateSchool = () => {
     const queryClient = useQueryClient();
 
@@ -95,12 +89,10 @@ export const useUpdateSchool = () => {
             toast.error((err as any).response?.data?.message || 'Failed to update school');
         },
         onSuccess: () => {
-            // Invalidate all schools queries regardless of filters/pagination  
             queryClient.invalidateQueries({ 
                 queryKey: ['schools'],
                 exact: false 
             });
-            // Also invalidate distribution data
             queryClient.invalidateQueries({ 
                 queryKey: ['distribution'],
                 exact: false 
@@ -113,7 +105,6 @@ export const useUpdateSchool = () => {
     });
 };
 
-// 🔹 Delete school (optimistic update + rollback)
 export const useDeleteSchool = () => {
     const queryClient = useQueryClient();
 
@@ -142,12 +133,10 @@ export const useDeleteSchool = () => {
             toast.error((err as any).response?.data?.message || 'Failed to delete school');
         },
         onSuccess: () => {
-            // Invalidate all schools queries regardless of filters/pagination
             queryClient.invalidateQueries({ 
                 queryKey: ['schools'], 
                 exact: false 
             });
-            // Also invalidate distribution data
             queryClient.invalidateQueries({ 
                 queryKey: ['distribution'], 
                 exact: false 
@@ -164,7 +153,7 @@ export const useDistribution = (filters?: Filter) => {
         queryKey: ['distribution', filters],
         queryFn: async () => {
             console.log('Fetching distribution with filters:', filters);
-            return schoolsApi.getDistribution(filters || {}); // fetch all if undefined
+            return schoolsApi.getDistribution(filters || {});
         },
         placeholderData: (previousData) => previousData,
         staleTime: 5000,

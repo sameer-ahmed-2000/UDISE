@@ -48,13 +48,10 @@ export default function SchoolsTable({
 
     const pageSizeOptions = [5, 10, 25, 50, 100];
     
-    // Use parent-controlled pagination if available, otherwise local state
     const currentPage = onPageChange ? page : localPage;
     const currentLimit = onPageSizeChange ? pageSize : localLimit;
     
-    // For server-side pagination, use schools directly
-    // For client-side pagination, slice the data
-    const shouldPaginate = !onPageChange; // Only paginate locally if parent doesn't control it
+    const shouldPaginate = !onPageChange;
     const totalItems = shouldPaginate ? schools.length : totalCount;
     const totalPages = Math.ceil(totalItems / currentLimit);
     
@@ -66,7 +63,7 @@ export default function SchoolsTable({
         const newLimit = Number(newSize);
         if (onPageSizeChange) {
             onPageSizeChange(newLimit);
-            onPageChange?.(1); // Reset to first page
+            onPageChange?.(1);
         } else {
             setLocalLimit(newLimit);
             setLocalPage(1);
@@ -81,11 +78,6 @@ export default function SchoolsTable({
         }
     };
 
-    const getStatusVariant = (status: string) => ({
-        Operational: 'default',
-        Closed: 'destructive',
-        Merged: 'secondary',
-    }[status] || 'default');
 
     const getLocationVariant = (location: string) => (location === 'Urban' ? 'outline' : 'secondary');
 
@@ -107,7 +99,6 @@ export default function SchoolsTable({
 
     const pageNumbers = generatePageNumbers();
 
-    // Calculate display values
     const startItem = totalItems > 0 ? (currentPage - 1) * currentLimit + 1 : 0;
     const endItem = Math.min(currentPage * currentLimit, totalItems);
 

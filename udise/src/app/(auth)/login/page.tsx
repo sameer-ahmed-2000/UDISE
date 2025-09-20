@@ -40,10 +40,9 @@ export default function LoginPage() {
                 password: data.password,
             });
 
-            const token = response.data.token; // JWT from backend
+            const token = response.data.token;
             if (!token) throw new Error('Invalid credentials');
 
-            // Store token in localStorage
             Cookies.set('token', token, { expires: 7 });
 
             toast.success('Login successful');

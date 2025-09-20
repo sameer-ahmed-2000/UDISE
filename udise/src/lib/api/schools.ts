@@ -1,7 +1,6 @@
 import { BackendDistributionData, DistributionData, Filter, PaginationResponse, School } from '@/types';
 import apiClient from './client';
 
-// Backend response format (different from our frontend format)
 interface BackendSchoolsResponse {
     total: number;
     page: number;
@@ -47,7 +46,6 @@ export const schoolsApi = {
         console.log('Fetching distribution with filters:', filters)
         const { data } = await apiClient.get<BackendDistributionData>('/api/data/distribution', { params: filters });
         
-        // Map backend response format to frontend expected format
         return {
             management_type: data.managementTypeDistribution?.reduce((acc, item) => {
                 acc[item.label] = item.count;

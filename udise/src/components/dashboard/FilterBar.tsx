@@ -58,12 +58,10 @@ export default function FilterBar({ filters, setFilters }: FilterBarProps) {
         }
     };
 
-    // Load states initially
     useEffect(() => {
         fetchData('state');
     }, []);
 
-    // Load districts when state changes
     useEffect(() => {
         if (filters.state) {
             fetchData('district', { state: filters.state });
@@ -77,7 +75,6 @@ export default function FilterBar({ filters, setFilters }: FilterBarProps) {
         }
     }, [filters.state, setFilters]);
 
-    // Load blocks when district changes
     useEffect(() => {
         if (filters.district && filters.state) {
             fetchData('block', { state: filters.state, district: filters.district });
@@ -89,7 +86,6 @@ export default function FilterBar({ filters, setFilters }: FilterBarProps) {
         }
     }, [filters.district, filters.state, setFilters]);
 
-    // Load villages when block changes
     useEffect(() => {
         if (filters.block && filters.district && filters.state) {
             fetchData('village', {
@@ -112,7 +108,6 @@ export default function FilterBar({ filters, setFilters }: FilterBarProps) {
     return (
         <Card className="p-4">
             <div className="flex flex-wrap gap-4 items-center">
-                {/* State */}
                 <Select value={filters.state || 'all'} onValueChange={(v) => handleChange('state', v)}>
                     <SelectTrigger className="w-[180px]">
                         <SelectValue placeholder="Select State" />
@@ -123,7 +118,6 @@ export default function FilterBar({ filters, setFilters }: FilterBarProps) {
                     </SelectContent>
                 </Select>
 
-                {/* District */}
                 <Select value={filters.district || 'all'} onValueChange={(v) => handleChange('district', v)} disabled={!filters.state}>
                     <SelectTrigger className="w-[180px]"><SelectValue placeholder="Select District" /></SelectTrigger>
                     <SelectContent>
