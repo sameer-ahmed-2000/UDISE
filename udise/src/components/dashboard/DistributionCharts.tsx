@@ -97,7 +97,7 @@ function ChartWithSelector({ title, data, colors }: ChartWithSelectorProps) {
         }
 
         return (
-            <ResponsiveContainer width="100%" height={250}>
+            <ResponsiveContainer width="100%" height={350}>
                 <PieChart>
                     <Pie
                         data={chartData}
