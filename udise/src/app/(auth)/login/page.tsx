@@ -56,7 +56,7 @@ export default function LoginPage() {
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 p-4">
+        <div className="min-h-screen flex items-center justify-center bg-[#def5ff] p-4">
             <Card className="w-full max-w-md">
                 <CardHeader className="space-y-1">
                     <div className="flex items-center justify-center mb-2">
@@ -110,9 +110,9 @@ export default function LoginPage() {
                     </CardFooter>
                     <div className="text-center mt-6">
                         <p className="text-sm text-gray-600">
-                            Already have an account?{" "}
-                            <a href="/login" className="text-blue-600 hover:underline">
-                                Sign in.
+                            Don&apos;t have an account?{" "}
+                            <a href="/signup" className="text-blue-600 hover:underline">
+                                Sign up.
                             </a>
                         </p>
                     </div>
