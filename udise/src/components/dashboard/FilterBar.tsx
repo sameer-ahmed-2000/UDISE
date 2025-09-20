@@ -9,155 +9,144 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { useFilters } from '@/lib/hooks/useFilters';
+import { Filter } from '@/types';
+import axios from 'axios';
+import Cookies from 'js-cookie';
 import { RotateCcw } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { Dispatch, SetStateAction, useEffect, useState } from 'react';
 
-// Mock data for states/districts/blocks/villages
-const locationData: {
-    states: string[];
-    districts: Record<string, string[]>;
-    blocks: Record<string, string[]>;
-    villages: Record<string, string[]>;
-} = {
-    states: ['Madhya Pradesh', 'Maharashtra', 'Uttar Pradesh', 'Rajasthan'],
-    districts: {
-        'Madhya Pradesh': ['Bhopal', 'Indore', 'Jabalpur', 'Gwalior'],
-        'Maharashtra': ['Mumbai', 'Pune', 'Nagpur', 'Nashik'],
-        'Uttar Pradesh': ['Lucknow', 'Kanpur', 'Agra', 'Varanasi'],
-        'Rajasthan': ['Jaipur', 'Jodhpur', 'Udaipur', 'Kota'],
-    },
-    blocks: {
-        'Bhopal': ['Block1', 'Block2', 'Block3'],
-        'Indore': ['Block1', 'Block2', 'Block3'],
-        'Mumbai': ['Block1', 'Block2', 'Block3'],
-        'Pune': ['Block1', 'Block2', 'Block3'],
-    },
-    villages: {
-        'Block1': ['Village1', 'Village2', 'Village3'],
-        'Block2': ['Village4', 'Village5', 'Village6'],
-        'Block3': ['Village7', 'Village8', 'Village9'],
-    },
-};
+interface FilterBarProps {
+    filters: Filter;
+    setFilters: Dispatch<SetStateAction<Filter>>;
+}
 
-export default function FilterBar() {
-    const { filters, updateFilter, clearFilters } = useFilters();
-    const [availableDistricts, setAvailableDistricts] = useState<string[]>([]);
-    const [availableBlocks, setAvailableBlocks] = useState<string[]>([]);
-    const [availableVillages, setAvailableVillages] = useState<string[]>([]);
+export default function FilterBar({ filters, setFilters }: FilterBarProps) {
+    const [states, setStates] = useState<string[]>([]);
+    const [districts, setDistricts] = useState<string[]>([]);
+    const [blocks, setBlocks] = useState<string[]>([]);
+    const [villages, setVillages] = useState<string[]>([]);
+    const token = Cookies.get('token');
 
+    const fetchData = async (level: string, parent?: Record<string, string>) => {
+        try {
+            const params: Record<string, string> = {};
+            if (parent) Object.assign(params, parent);
+
+            const res = await axios.get<{ data: string[] }>(`${process.env.NEXT_PUBLIC_API_URL}/api/data/filter`, {
+                headers: { Authorization: `Bearer ${token}` },
+                params,
+            });
+
+            const data = res.data.data;
+
+            switch (level) {
+                case 'state':
+                    setStates(data);
+                    break;
+                case 'district':
+                    setDistricts(data);
+                    break;
+                case 'block':
+                    setBlocks(data);
+                    break;
+                case 'village':
+                    setVillages(data);
+                    break;
+            }
+        } catch (err) {
+            console.error(`Failed to fetch ${level}:`, err);
+        }
+    };
+
+    // Load states initially
+    useEffect(() => {
+        fetchData('state');
+    }, []);
+
+    // Load districts when state changes
     useEffect(() => {
         if (filters.state) {
-            setAvailableDistricts(locationData.districts[filters.state] || []);
+            fetchData('district', { state: filters.state });
+            setFilters(prev => ({ ...prev, district: '', block: '', village: '' }));
+            setBlocks([]);
+            setVillages([]);
         } else {
-            setAvailableDistricts([]);
+            setDistricts([]);
+            setBlocks([]);
+            setVillages([]);
         }
-    }, [filters.state]);
+    }, [filters.state, setFilters]);
 
+    // Load blocks when district changes
     useEffect(() => {
-        if (filters.district) {
-            setAvailableBlocks(locationData.blocks[filters.district] || []);
+        if (filters.district && filters.state) {
+            fetchData('block', { state: filters.state, district: filters.district });
+            setFilters(prev => ({ ...prev, block: '', village: '' }));
+            setVillages([]);
         } else {
-            setAvailableBlocks([]);
+            setBlocks([]);
+            setVillages([]);
         }
-    }, [filters.district]);
+    }, [filters.district, filters.state, setFilters]);
 
+    // Load villages when block changes
     useEffect(() => {
-        if (filters.block) {
-            setAvailableVillages(locationData.villages[filters.block] || []);
+        if (filters.block && filters.district && filters.state) {
+            fetchData('village', {
+                state: filters.state,
+                district: filters.district,
+                block: filters.block,
+            });
+            setFilters(prev => ({ ...prev, village: '' }));
         } else {
-            setAvailableVillages([]);
+            setVillages([]);
         }
-    }, [filters.block]);
+    }, [filters.block, filters.district, filters.state, setFilters]);
 
-    const handleStateChange = (value: string) => {
-        updateFilter('state', value === 'all' ? '' : value);
+    const handleChange = (key: 'state' | 'district' | 'block' | 'village', value: string) => {
+        setFilters(prev => ({ ...prev, [key]: value === 'all' ? '' : value }));
     };
 
-    const handleDistrictChange = (value: string) => {
-        updateFilter('district', value === 'all' ? '' : value);
-    };
-
-    const handleBlockChange = (value: string) => {
-        updateFilter('block', value === 'all' ? '' : value);
-    };
-
-    const handleVillageChange = (value: string) => {
-        updateFilter('village', value === 'all' ? '' : value);
-    };
-
-    const handleReset = () => {
-        clearFilters();
-    };
+    const handleReset = () => setFilters({});
 
     return (
         <Card className="p-4">
             <div className="flex flex-wrap gap-4 items-center">
-                <Select value={filters.state || 'all'} onValueChange={handleStateChange}>
+                {/* State */}
+                <Select value={filters.state || 'all'} onValueChange={(v) => handleChange('state', v)}>
                     <SelectTrigger className="w-[180px]">
                         <SelectValue placeholder="Select State" />
                     </SelectTrigger>
                     <SelectContent>
                         <SelectItem value="all">All States</SelectItem>
-                        {locationData.states.map((state) => (
-                            <SelectItem key={state} value={state}>
-                                {state}
-                            </SelectItem>
-                        ))}
+                        {states.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
                     </SelectContent>
                 </Select>
 
-                <Select
-                    value={filters.district || 'all'}
-                    onValueChange={handleDistrictChange}
-                    disabled={!filters.state}
-                >
-                    <SelectTrigger className="w-[180px]">
-                        <SelectValue placeholder="Select District" />
-                    </SelectTrigger>
+                {/* District */}
+                <Select value={filters.district || 'all'} onValueChange={(v) => handleChange('district', v)} disabled={!filters.state}>
+                    <SelectTrigger className="w-[180px]"><SelectValue placeholder="Select District" /></SelectTrigger>
                     <SelectContent>
                         <SelectItem value="all">All Districts</SelectItem>
-                        {availableDistricts.map((district) => (
-                            <SelectItem key={district} value={district}>
-                                {district}
-                            </SelectItem>
-                        ))}
+                        {districts.map((d) => <SelectItem key={d} value={d}>{d}</SelectItem>)}
                     </SelectContent>
                 </Select>
 
-                <Select
-                    value={filters.block || 'all'}
-                    onValueChange={handleBlockChange}
-                    disabled={!filters.district}
-                >
-                    <SelectTrigger className="w-[180px]">
-                        <SelectValue placeholder="Select Block" />
-                    </SelectTrigger>
+                {/* Block */}
+                <Select value={filters.block || 'all'} onValueChange={(v) => handleChange('block', v)} disabled={!filters.district}>
+                    <SelectTrigger className="w-[180px]"><SelectValue placeholder="Select Block" /></SelectTrigger>
                     <SelectContent>
                         <SelectItem value="all">All Blocks</SelectItem>
-                        {availableBlocks.map((block) => (
-                            <SelectItem key={block} value={block}>
-                                {block}
-                            </SelectItem>
-                        ))}
+                        {blocks.map((b) => <SelectItem key={b} value={b}>{b}</SelectItem>)}
                     </SelectContent>
                 </Select>
 
-                <Select
-                    value={filters.village || 'all'}
-                    onValueChange={handleVillageChange}
-                    disabled={!filters.block}
-                >
-                    <SelectTrigger className="w-[180px]">
-                        <SelectValue placeholder="Select Village" />
-                    </SelectTrigger>
+                {/* Village */}
+                <Select value={filters.village || 'all'} onValueChange={(v) => handleChange('village', v)} disabled={!filters.block}>
+                    <SelectTrigger className="w-[180px]"><SelectValue placeholder="Select Village" /></SelectTrigger>
                     <SelectContent>
                         <SelectItem value="all">All Villages</SelectItem>
-                        {availableVillages.map((village) => (
-                            <SelectItem key={village} value={village}>
-                                {village}
-                            </SelectItem>
-                        ))}
+                        {villages.map((v) => <SelectItem key={v} value={v}>{v}</SelectItem>)}
                     </SelectContent>
                 </Select>
 

@@ -1,8 +1,7 @@
-'use client';
+"use client";
 
-import { useSession, signOut } from 'next-auth/react';
-import { Button } from '@/components/ui/button';
-import { LogOut, School, User } from 'lucide-react';
+import { Button } from "@/components/ui/button";
+import { LogOut, School, User } from "lucide-react";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -10,10 +9,45 @@ import {
     DropdownMenuLabel,
     DropdownMenuSeparator,
     DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+} from "@/components/ui/dropdown-menu";
+import { useState, useEffect } from "react";
+import Cookies from "js-cookie";
+import { useRouter } from "next/navigation";
+import apiClient from "@/lib/api/client";
+
+interface CurrentUserResponse {
+  username: string;
+}
 
 export default function DashboardHeader() {
-    const { data: session } = useSession();
+    const [user, setUser] = useState<string|null>("");
+    const router = useRouter();
+    useEffect(() => {
+        const getUser = async () => {
+            try {
+                const token = Cookies.get("token");
+                if (!token) {
+                    setUser(null);
+                    return;
+                }
+
+                const response = await apiClient.get<CurrentUserResponse>('/api/auth/username');
+                const userData: CurrentUserResponse = response.data;
+
+                setUser(userData.username);
+            } catch (err: any) {
+                console.error("Failed to fetch current user:", err.response?.data || err.message);
+                setUser(null);
+            }
+        };
+
+        getUser();
+    }, []);
+    const handleLogout = () => {
+        Cookies.remove("token");
+        router.push("/login");
+    };
+
 
     return (
         <header className="bg-white border-b border-gray-200 sticky top-0 z-40">
@@ -28,18 +62,13 @@ export default function DashboardHeader() {
                         <DropdownMenuTrigger asChild>
                             <Button variant="ghost" className="flex items-center space-x-2">
                                 <User className="h-4 w-4" />
-                                <span>{session?.user?.name || session?.user?.email}</span>
+                                <span>{user|| "Loading..."}</span>
                             </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                             <DropdownMenuLabel>My Account</DropdownMenuLabel>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem className="text-sm">
-                                {session?.user?.email}
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
                             <DropdownMenuItem
-                                onClick={() => signOut({ callbackUrl: '/login' })}
+                                onClick={handleLogout}
                                 className="text-destructive cursor-pointer"
                             >
                                 <LogOut className="mr-2 h-4 w-4" />

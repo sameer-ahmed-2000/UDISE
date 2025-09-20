@@ -9,7 +9,7 @@ export interface School {
     village: string;
     location: 'Urban' | 'Rural';
     management_type: 'Government' | 'Private' | 'Aided';
-    school_category: 'Primary' | 'Secondary' | 'Higher Secondary';
+    school_category: string;
     school_type: 'Boys' | 'Girls' | 'Co-Ed';
     school_status: 'Active' | 'Closed' | 'Merged';
     createdAt?: string;

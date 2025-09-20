@@ -1,14 +1,11 @@
 'use client';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
+import { Button } from '@/components/ui/button';
 import {
     Dialog,
     DialogContent,
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -20,8 +17,14 @@ import {
 } from '@/components/ui/select';
 import { useCreateSchool, useUpdateSchool } from '@/lib/hooks/useSchools';
 import { School } from '@/types';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useQueryClient } from '@tanstack/react-query';
+import axios from 'axios';
+import Cookies from 'js-cookie';
 import { Loader2 } from 'lucide-react';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { useForm } from 'react-hook-form';
+import * as z from 'zod';
 
 const schoolSchema = z.object({
     udise_code: z.string().min(1, 'UDISE code is required'),
@@ -32,7 +35,7 @@ const schoolSchema = z.object({
     village: z.string().min(1, 'Village is required'),
     location: z.enum(['Urban', 'Rural']),
     management_type: z.enum(['Government', 'Private', 'Aided']),
-    school_category: z.enum(['Primary', 'Secondary', 'Higher Secondary']),
+    school_category: z.string().min(1, 'School category is required'),
     school_type: z.enum(['Boys', 'Girls', 'Co-Ed']),
     school_status: z.enum(['Active', 'Closed', 'Merged']),
 });
@@ -43,11 +46,18 @@ interface SchoolFormModalProps {
     isOpen: boolean;
     onClose: () => void;
     school?: School | null;
+    onSuccess?: () => void
 }
 
-export default function SchoolFormModal({ isOpen, onClose, school }: SchoolFormModalProps) {
+export default function SchoolFormModal({ isOpen, onClose, school, onSuccess }: SchoolFormModalProps) {
     const createMutation = useCreateSchool();
     const updateMutation = useUpdateSchool();
+    const [states, setStates] = useState<string[]>([]);
+    const [districts, setDistricts] = useState<string[]>([]);
+    const [blocks, setBlocks] = useState<string[]>([]);
+    const [villages, setVillages] = useState<string[]>([]);
+    const token = Cookies.get('token'); // or your auth token
+    const queryClient = useQueryClient()
     const isEdit = !!school;
 
     const {
@@ -60,6 +70,12 @@ export default function SchoolFormModal({ isOpen, onClose, school }: SchoolFormM
     } = useForm<SchoolFormData>({
         resolver: zodResolver(schoolSchema),
         defaultValues: {
+            udise_code: '',
+            school_name: '',
+            state: '',
+            district: '',
+            block: '',
+            village: '',
             location: 'Rural',
             management_type: 'Government',
             school_category: 'Primary',
@@ -68,8 +84,10 @@ export default function SchoolFormModal({ isOpen, onClose, school }: SchoolFormM
         },
     });
 
+    // Reset form when school prop changes (edit -> create or create -> edit)
     useEffect(() => {
         if (school) {
+            // Edit mode - populate with school data
             reset({
                 udise_code: school.udise_code,
                 school_name: school.school_name,
@@ -84,15 +102,136 @@ export default function SchoolFormModal({ isOpen, onClose, school }: SchoolFormM
                 school_status: school.school_status,
             });
         } else {
+            // Create mode - reset to default values and clear all dropdowns
             reset({
+                udise_code: '',
+                school_name: '',
+                state: '',
+                district: '',
+                block: '',
+                village: '',
                 location: 'Rural',
                 management_type: 'Government',
                 school_category: 'Primary',
                 school_type: 'Co-Ed',
                 school_status: 'Active',
             });
+            // Clear all dropdown options
+            setDistricts([]);
+            setBlocks([]);
+            setVillages([]);
         }
     }, [school, reset]);
+
+    // Cleanup when modal closes
+    useEffect(() => {
+        if (!isOpen) {
+            // Reset form to initial state when modal closes
+            reset({
+                udise_code: '',
+                school_name: '',
+                state: '',
+                district: '',
+                block: '',
+                village: '',
+                location: 'Rural',
+                management_type: 'Government',
+                school_category: 'Primary',
+                school_type: 'Co-Ed',
+                school_status: 'Active',
+            });
+            // Clear dropdowns
+            setDistricts([]);
+            setBlocks([]);
+            setVillages([]);
+        }
+    }, [isOpen, reset]);
+    const fetchOptions = async (level: string, parent?: Record<string, string>) => {
+        try {
+            // Build params ensuring we don't send empty values
+            const params: any = {};
+            if (parent) {
+                // Only add non-empty, non-null, non-undefined values
+                Object.keys(parent).forEach(key => {
+                    if (parent[key]) {
+                        params[key] = parent[key];
+                    }
+                });
+            }
+
+            const res = await axios.get(`${process.env.NEXT_PUBLIC_API_URL}/api/data/filter`, {
+                headers: { Authorization: `Bearer ${token}` },
+                params,
+            });
+
+            const data = (res.data as { data: string[] }).data;
+            switch (level) {
+                case 'state': setStates(data); break;
+                case 'district': setDistricts(data); break;
+                case 'block': setBlocks(data); break;
+                case 'village': setVillages(data); break;
+            }
+        } catch (err: any) {
+            console.error(`Failed to fetch ${level}:`, err);
+            // Show user-friendly error message
+            if (err.response?.status === 400) {
+                console.error(`Invalid parameters for ${level} filter request`);
+            } else {
+                console.error(`Network error when fetching ${level} options`);
+            }
+        }
+    };
+
+    // Initial load - fetch states when component mounts
+    useEffect(() => { 
+        fetchOptions('state'); 
+    }, []);
+
+    // When state changes
+    useEffect(() => {
+        const stateValue = watch('state');
+        if (stateValue) {
+            fetchOptions('district', { state: stateValue });
+            setValue('district', '');
+            setBlocks([]);
+            setVillages([]);
+        } else {
+            setDistricts([]);
+            setBlocks([]);
+            setVillages([]);
+        }
+    }, [watch('state')]);
+
+    // When district changes
+    useEffect(() => {
+        const stateValue = watch('state');
+        const districtValue = watch('district');
+        
+        if (stateValue && districtValue) {
+            fetchOptions('block', { state: stateValue, district: districtValue });
+            setValue('block', '');
+            setVillages([]);
+        } else {
+            setBlocks([]);
+            setVillages([]);
+        }
+    }, [watch('state'), watch('district')]);
+
+    // When block changes
+    useEffect(() => {
+        const stateValue = watch('state');
+        const districtValue = watch('district');
+        const blockValue = watch('block');
+        
+        if (stateValue && districtValue && blockValue) {
+            fetchOptions('village', { state: stateValue, district: districtValue, block: blockValue });
+            setValue('village', '');
+        } else {
+            setVillages([]);
+        }
+    }, [watch('state'), watch('district'), watch('block')]);
+
+    // In your SchoolFormModal component, update the onSubmit function:
 
     const onSubmit = async (data: SchoolFormData) => {
         try {
@@ -104,9 +243,37 @@ export default function SchoolFormModal({ isOpen, onClose, school }: SchoolFormM
             } else {
                 await createMutation.mutateAsync(data);
             }
+            // The mutation hooks will handle query invalidation automatically
             onClose();
-        } catch (error) {
+            // Reset form after successful submission
+            reset({
+                udise_code: '',
+                school_name: '',
+                state: '',
+                district: '',
+                block: '',
+                village: '',
+                location: 'Rural',
+                management_type: 'Government',
+                school_category: 'Primary',
+                school_type: 'Co-Ed',
+                school_status: 'Active',
+            });
+            // Clear dropdowns
+            setDistricts([]);
+            setBlocks([]);
+            setVillages([]);
+            // Call the success callback if provided
+            onSuccess?.();
+        } catch (error: any) {
             // Error is handled by the mutation hooks
+            console.error('Form submission error:', error);
+            // Show user-friendly error message
+            if (error.response?.status === 400) {
+                console.error('Validation error in form submission');
+            } else {
+                console.error('Network error during form submission');
+            }
         }
     };
 
@@ -115,7 +282,7 @@ export default function SchoolFormModal({ isOpen, onClose, school }: SchoolFormM
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
             <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-                <DialogHeader>
+                <DialogHeader >
                     <DialogTitle>{isEdit ? 'Edit School' : 'Add New School'}</DialogTitle>
                 </DialogHeader>
 
@@ -149,12 +316,16 @@ export default function SchoolFormModal({ isOpen, onClose, school }: SchoolFormM
 
                         <div className="space-y-2">
                             <Label htmlFor="state">State</Label>
-                            <Input
-                                id="state"
-                                {...register('state')}
+                            <Select
+                                value={watch('state') || ''}
+                                onValueChange={v => setValue('state', v)}
                                 disabled={isLoading}
-                                placeholder="Enter state"
-                            />
+                            >
+                                <SelectTrigger><SelectValue placeholder="Select state" /></SelectTrigger>
+                                <SelectContent>
+                                    {states.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                                </SelectContent>
+                            </Select>
                             {errors.state && (
                                 <p className="text-sm text-destructive">{errors.state.message}</p>
                             )}
@@ -162,12 +333,16 @@ export default function SchoolFormModal({ isOpen, onClose, school }: SchoolFormM
 
                         <div className="space-y-2">
                             <Label htmlFor="district">District</Label>
-                            <Input
-                                id="district"
-                                {...register('district')}
-                                disabled={isLoading}
-                                placeholder="Enter district"
-                            />
+                            <Select
+                                value={watch('district') || ''}
+                                onValueChange={v => setValue('district', v)}
+                                disabled={!watch('state') || isLoading}
+                            >
+                                <SelectTrigger><SelectValue placeholder="Select district" /></SelectTrigger>
+                                <SelectContent>
+                                    {districts.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}
+                                </SelectContent>
+                            </Select>
                             {errors.district && (
                                 <p className="text-sm text-destructive">{errors.district.message}</p>
                             )}
@@ -175,12 +350,16 @@ export default function SchoolFormModal({ isOpen, onClose, school }: SchoolFormM
 
                         <div className="space-y-2">
                             <Label htmlFor="block">Block</Label>
-                            <Input
-                                id="block"
-                                {...register('block')}
-                                disabled={isLoading}
-                                placeholder="Enter block"
-                            />
+                            <Select
+                                value={watch('block') || ''}
+                                onValueChange={v => setValue('block', v)}
+                                disabled={!watch('district') || isLoading}
+                            >
+                                <SelectTrigger><SelectValue placeholder="Select block" /></SelectTrigger>
+                                <SelectContent>
+                                    {blocks.map(b => <SelectItem key={b} value={b}>{b}</SelectItem>)}
+                                </SelectContent>
+                            </Select>
                             {errors.block && (
                                 <p className="text-sm text-destructive">{errors.block.message}</p>
                             )}
@@ -188,12 +367,16 @@ export default function SchoolFormModal({ isOpen, onClose, school }: SchoolFormM
 
                         <div className="space-y-2">
                             <Label htmlFor="village">Village</Label>
-                            <Input
-                                id="village"
-                                {...register('village')}
-                                disabled={isLoading}
-                                placeholder="Enter village"
-                            />
+                            <Select
+                                value={watch('village') || ''}
+                                onValueChange={v => setValue('village', v)}
+                                disabled={!watch('block') || isLoading}
+                            >
+                                <SelectTrigger><SelectValue placeholder="Select village" /></SelectTrigger>
+                                <SelectContent>
+                                    {villages.map(v => <SelectItem key={v} value={v}>{v}</SelectItem>)}
+                                </SelectContent>
+                            </Select>
                             {errors.village && (
                                 <p className="text-sm text-destructive">{errors.village.message}</p>
                             )}

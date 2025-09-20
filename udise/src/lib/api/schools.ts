@@ -1,10 +1,27 @@
-import { DistributionData, Filter, PaginationResponse, School } from '@/types';
+import { BackendDistributionData, DistributionData, Filter, PaginationResponse, School } from '@/types';
 import apiClient from './client';
+
+// Backend response format (different from our frontend format)
+interface BackendSchoolsResponse {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+    hasNextPage: boolean;
+    hasPrevPage: boolean;
+    schools: School[];
+}
 
 export const schoolsApi = {
     getSchools: async (filters: Filter): Promise<PaginationResponse<School>> => {
-        const { data } = await apiClient.get<PaginationResponse<School>>('/api/data', { params: filters });
-        return data;
+        const { data } = await apiClient.get<BackendSchoolsResponse>('/api/data', { params: filters });
+        
+        return {
+            data: data.schools || [],
+            total: data.total || 0,
+            page: data.page || 1,
+            totalPages: data.totalPages || 1
+        };
     },
 
     getSchool: async (id: string): Promise<School> => {
@@ -27,7 +44,23 @@ export const schoolsApi = {
     },
 
     getDistribution: async (filters: Filter): Promise<DistributionData> => {
-        const { data } = await apiClient.get<DistributionData>('/api/data/distribution', { params: filters });
-        return data;
+        console.log('Fetching distribution with filters:', filters)
+        const { data } = await apiClient.get<BackendDistributionData>('/api/data/distribution', { params: filters });
+        
+        // Map backend response format to frontend expected format
+        return {
+            management_type: data.managementTypeDistribution?.reduce((acc, item) => {
+                acc[item.label] = item.count;
+                return acc;
+            }, {} as Record<string, number>) || {},
+            location: data.locationDistribution?.reduce((acc, item) => {
+                acc[item.label] = item.count;
+                return acc;
+            }, {} as Record<string, number>) || {},
+            school_type: data.schoolTypeDistribution?.reduce((acc, item) => {
+                acc[item.label] = item.count;
+                return acc;
+            }, {} as Record<string, number>) || {}
+        };
     },
 };

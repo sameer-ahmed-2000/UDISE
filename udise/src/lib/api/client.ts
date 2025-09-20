@@ -1,29 +1,30 @@
 import axios from 'axios';
-
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+import Cookies from 'js-cookie';
 
 const apiClient = axios.create({
-    baseURL: API_BASE_URL,
+    baseURL: process.env.NEXT_PUBLIC_API_URL,
     headers: {
         'Content-Type': 'application/json',
     },
 });
 
-apiClient.interceptors.request.use((config) => {
-    // Note: We'll handle auth tokens through other means
-    // since getSession() is async and interceptors expect sync functions
-    return config;
-});
+apiClient.interceptors.request.use(
+    (config) => {
+        const token = Cookies.get('token');
 
-apiClient.interceptors.response.use(
-    (response) => response,
-    async (error) => {
-        if (error.response?.status === 401) {
-            // Handle token refresh or redirect to login
-            window.location.href = '/login';
+        if (!config.headers) {
+            config.headers = {};
         }
-        return Promise.reject(error);
-    }
+
+        if (token) {
+            config.headers['Authorization'] = `Bearer ${token}`;
+        }
+
+        config.headers['X-Custom-Header'] = 'CustomValue';
+
+        return config;
+    },
+    (error) => Promise.reject(error)
 );
 
 export default apiClient;

@@ -1,4 +1,5 @@
 'use client';
+
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
@@ -12,14 +13,17 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import axios from 'axios';
 import Cookies from 'js-cookie';
-const loginSchema = z.object({
-    email: z.string().email('Invalid email address'),
-    password: z.string().min(6, 'Password must be at least 6 characters'),
+const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{8,}$/;
+
+const signupSchema = z.object({
+    name: z.string().min(2, "Name must be at least 2 characters"),
+    email: z.string().email("Invalid email address"),
+    password: z.string().regex(passwordRegex, "Password must be at least 8 characters and include uppercase, lowercase, number, and special character")
 });
 
-type LoginFormData = z.infer<typeof loginSchema>;
+type SignupFormData = z.infer<typeof signupSchema>;
 
-export default function LoginPage() {
+export default function signupPage() {
     const router = useRouter();
     const [isLoading, setIsLoading] = useState(false);
 
@@ -27,26 +31,27 @@ export default function LoginPage() {
         register,
         handleSubmit,
         formState: { errors },
-    } = useForm<LoginFormData>({
-        resolver: zodResolver(loginSchema),
+    } = useForm<SignupFormData>({
+        resolver: zodResolver(signupSchema),
     });
 
-    const onSubmit = async (data: LoginFormData) => {
+    const onSubmit = async (data: SignupFormData) => {
         setIsLoading(true);
 
         try {
-            const response = await axios.post<any>(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/login`, {
+            const response = await axios.post<any>(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/signup`, {
+                name: data.name,
                 email: data.email,
                 password: data.password,
             });
 
-            const token = response.data.token; // JWT from backend
+            const token = response.data.token;
             if (!token) throw new Error('Invalid credentials');
 
             // Store token in localStorage
             Cookies.set('token', token, { expires: 7 });
 
-            toast.success('Login successful');
+            toast.success('Registeration successful');
             router.push('/dashboard');
         } catch (error: any) {
             toast.error(error.response?.data?.message || 'Invalid credentials');
@@ -56,19 +61,32 @@ export default function LoginPage() {
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 p-4">
+        <div className="min-h-screen flex items-center justify-center bg-[#def5ff] p-4">
             <Card className="w-full max-w-md">
                 <CardHeader className="space-y-1">
                     <div className="flex items-center justify-center mb-2">
                         <School className="h-12 w-12 text-primary" />
                     </div>
-                    <CardTitle className="text-2xl font-bold text-center">UDISE Login</CardTitle>
+                    <CardTitle className="text-2xl font-bold text-center">UDISE Register</CardTitle>
                     <CardDescription className="text-center">
-                        Enter your credentials to access the dashboard
+                        Create an account to access the dashboard
                     </CardDescription>
                 </CardHeader>
                 <form onSubmit={handleSubmit(onSubmit)}>
                     <CardContent className="space-y-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="name">Name</Label>
+                            <Input
+                                id="name"
+                                type="name"
+                                placeholder="John"
+                                {...register('name')}
+                                disabled={isLoading}
+                            />
+                            {errors.name && (
+                                <p className="text-sm text-destructive">{errors.name.message}</p>
+                            )}
+                        </div>
                         <div className="space-y-2">
                             <Label htmlFor="email">Email</Label>
                             <Input
@@ -101,18 +119,18 @@ export default function LoginPage() {
                             {isLoading ? (
                                 <>
                                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                    Signing in...
+                                    Signing up...
                                 </>
                             ) : (
-                                'Sign In'
+                                'Sign Up'
                             )}
                         </Button>
                     </CardFooter>
                     <div className="text-center mt-6">
                         <p className="text-sm text-gray-600">
-                            Already have an account?{" "}
-                            <a href="/login" className="text-blue-600 hover:underline">
-                                Sign in.
+                            Don&apos;t have an account?{" "}
+                            <a href="/signup" className="text-blue-600 hover:underline">
+                                Sign up.
                             </a>
                         </p>
                     </div>
