@@ -91,7 +91,7 @@ export default function signupPage() {
                             <Input
                                 id="email"
                                 type="email"
-                                placeholder="test@example.com"
+                                placeholder="john@example.com"
                                 {...register('email')}
                                 disabled={isLoading}
                             />
