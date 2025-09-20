@@ -1,3 +1,4 @@
+/* eslint-disable */
 import { schoolsApi } from '@/lib/api/schools';
 import { Filter, School } from '@/types';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';

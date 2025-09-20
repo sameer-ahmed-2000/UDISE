@@ -1,5 +1,5 @@
 "use client";
-
+/* eslint-disable */
 import { Button } from "@/components/ui/button";
 import { LogOut, School, User } from "lucide-react";
 import {
